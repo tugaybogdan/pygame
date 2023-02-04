@@ -1,8 +1,10 @@
 import sys
+from time import sleep
 
 import pygame
 
 from settings import Settings
+from game_stats import GameStats
 from ship import Ship
 from bullet import Bullet
 from alien import Alien
@@ -21,6 +23,9 @@ class AlienInvasion:
         self.settings.screen_height = self.screen.get_rect().height
         pygame.display.set_caption("Alien Invasion")
 
+        # Створення екземпляру для зберігання ігрової статистики
+        self.stats = GameStats(self)
+        
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
         self.aliens = pygame.sprite.Group()
@@ -72,9 +77,11 @@ class AlienInvasion:
         """Запуск основного цикла игры"""
         while True:
             self._check_events()
-            self.ship.update()
-            self._update_bullets()
-            self._update_aliens()
+            if self.stats.game_active:
+                self.ship.update()
+                self._update_bullets()
+                self._update_aliens()
+
             self._update_screen()
 
     def _check_events(self):
@@ -129,12 +136,46 @@ class AlienInvasion:
         if not self.aliens:
             # Знищення існуючих снарядів та створення нового флоту
             self.bullets.empty()
+            sleep(0.1)
             self._create_fleet()
 
     def _update_aliens(self):
         """Оновлює позиції всіх прибільців з флоту"""
         self._check_fleet_edges()
         self.aliens.update()
+
+        # Перевірка колізій "прибулець - корабель"
+        if pygame.sprite.spritecollideany(self.ship, self.aliens):
+            self._ship_hit()
+
+        # Перевірити, чи досягли прибульці нижнього краю
+        self._check_aliens_bottom()
+
+    def _check_aliens_bottom(self):
+        """"""
+        screen_rect = self.screen.get_rect()
+        for alien in self.aliens.sprites():
+            if alien.rect.bottom >= screen_rect.bottom:
+                self._ship_hit()
+                break
+    
+    def _ship_hit(self):
+        """Обробляє зіткнення корабля з прибульцем"""
+        # Зменшення ships_left
+        if self.stats.ships_left > 0:
+            self.stats.ships_left -= 1
+            # Очищення списків прибульців та снарядів
+            self.aliens.empty()
+            self.bullets.empty()
+
+            # Створення нового флоту та розміщення корабля по центру
+            self._create_fleet()
+            self.ship.center_ship()
+
+            # Пауза
+            sleep(0.5)
+        else:
+            self.stats.game_active = False
 
     def _update_screen(self):
         """Обновляет изображения на экране и отображает новый экран"""
