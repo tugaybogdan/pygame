@@ -8,7 +8,7 @@ class GameStats():
 
         # Гра запускаеться в активному стані
         self.game_active = True
-
+         
     def reset_stats(self):
         """Ініціалізує статистику, що змінюється під час гри"""
         self.ships_left = self.settings.ship_limit
